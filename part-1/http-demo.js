@@ -5,20 +5,16 @@ const server = http.createServer((req, res) => {
   // `res` 是一个 http.ServerResponse，它是一个可写流。
 
   let body = "";
-  // 获取 utf8 字符串形式的数据。
-  // 如果未设置编码，将接收 Buffer 对象。
-  req.setEncoding("utf8");
-
-  // 给请求对象添加 data 事件监听器。当请求数据可读时，会触发该事件
+  // 使用可读流读取客户端的请求数据，将每次的数据拼接起来
   req.on("data", (chunk) => {
     body += chunk;
   });
 
-  // 当请求的数据全部接收完毕时，会触发该事件
+  // 当请求的数据全部接收完毕时，会触发 end 事件
   req.on("end", () => {
     try {
-      const data = JSON.parse(body);
-      // 向响应对象写入数据
+      const data = JSON.parse(body.toString());
+      // 使用可写流的方式向响应对象写入数据
       res.write(typeof data);
       res.end();
     } catch (er) {
@@ -37,4 +33,4 @@ server.listen(1337);
 // $ curl localhost:1337 -d "\"foo\""
 // string
 // $ curl localhost:1337 -d "not json"
-// error: Unexpected token 'o', "not json" is not valid JSON 
+// error: Unexpected token o in JSON at position 1
