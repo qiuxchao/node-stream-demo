@@ -8,6 +8,30 @@
 
 > 提示：Shell 中的管道（pipe）是一种特殊的操作符 `|`，它用于将一个命令的输出连接到另一个命令的输入，从而实现两个或多个命令之间的数据传输。
 
+## 流的应用
+
+1. 文件操作：
+
+    - 读取大文件时，使用 `fs.createReadStream()` 创建可读流，能够逐块读取文件内容，避免一次性加载整个文件到内存中，减少内存占用。 
+    - 写入大文件时，使用 `fs.createWriteStream()` 创建可写流，可以持续不断地写入数据，同样避免一次性写入大量数据造成内存压力。
+
+2. 网络通信：
+    - HTTP请求和响应：在客户端和服务器端，HTTP请求和响应都可以被视作流。客户端可以创建可写流来发送请求体，服务端可以创建可读流来接收请求体；反之，服务端可以创建可写流来发送响应体，客户端可以创建可读流来接收响应体。
+
+3. 数据压缩与解压：
+
+    - 使用zlib模块，可以创建转换流对数据进行压缩（如gzip）或解压缩，数据在流动过程中会被自动处理。
+
+4. 数据加密与解密：
+
+    - crypto模块提供的crypto streams可用于加密和解密数据流，例如在SSL/TLS通信中。
+
+5. 数据流处理管道：
+
+    - 多个流可以通过 `.pipe()` 方法串联起来形成一个管道，一个流的输出作为另一个流的输入，实现数据的连续处理。例如，先读取文件，接着压缩，然后上传到远程服务器，整个过程可以构建一条高效的流处理链路。
+
+
+
 ## 流的基本使用
 
 Node.js 中的流可以分为四种类型：可读流（Readable）、可写流（Writable）、双工流（Duplex）和转换流（Transform）。每种类型都有其特定的用途和功能。
@@ -23,7 +47,9 @@ const Transform = Stream.Transform;
 
 ### 可读流（Readable Streams）
 
-可读流用于读取数据。它们提供一个接口来从数据源（如文件、网络请求或其他可写流）读取数据。你可以监听可读流的 `'data'` 事件来处理每次接收到的数据块。
+可读流用于读取数据。它提供一个接口来从数据源（如文件、网络请求或其他可写流）读取数据。可以通过监听可读流的 `'data'` 事件来处理每次接收到的数据块。
+
+#### 创建可读流
 
 创建可读流时，需要继承 `Readable`，并实现 `_read` 方法。
 
@@ -44,6 +70,7 @@ const { Readable } = require("stream");
 
 // 创建可读流
 class ToReadable extends Readable {
+  // 接收一个迭代器
   constructor(iterator) {
     super();
     this.iterator = iterator;
@@ -57,10 +84,8 @@ class ToReadable extends Readable {
       // 数据源已枯竭，调用 `push(null)` 通知流
       return this.push(null);
     }
-    setTimeout(() => {
-      // 通过 `push` 方法将数据添加到流中
-      this.push(res.value + "\n");
-    }, 0);
+    // 通过 `push` 方法将数据添加到流中
+    this.push(res.value + "\n");
   }
 }
 
@@ -86,9 +111,11 @@ readable.on("end", () => {
 });
 ```
 
+#### 消费可读流
+
 ### 可写流（Writable Streams）
 
-可写流用于写入数据。它们提供一个接口来将数据写入目标（如文件、网络请求或其他可读流）。你可以使用 `write()` 方法写入数据，然后监听 `'finish'` 事件来检测写入操作是否完成。
+可写流用于写入数据。它提供一个接口来将数据写入目标（如文件、网络请求或其他可读流）。
 
 - 上游通过调用 `writable.write(data)` 将数据写入可写流中。`write()` 方法会调用 `_write()` 将 data 写入底层。
 - 在 `_write` 中，当数据成功写入底层后，必须调用 `next(err)` 告诉流开始处理下一个数据。
@@ -133,6 +160,8 @@ writable.write("c" + "\n");
 // 再无数据写入流时，调用 `end()` 方法结束流
 writable.end();
 ```
+
+> 参考链接：<https://nodejs.cn/api/stream.html#%E5%8F%AF%E5%86%99%E6%B5%81>
 
 ### 双工流（Duplex Streams）
 
@@ -189,11 +218,11 @@ transform._transform = function (chunk, encoding, next) {
   next();
 };
 
-transform.on('data', (data) => console.log(data.toString()));
+transform.on("data", (data) => console.log(data.toString()));
 
-transform.write('a');
-transform.write('b');
-transform.write('c');
+transform.write("a");
+transform.write("b");
+transform.write("c");
 transform.end();
 
 // A
@@ -243,10 +272,28 @@ transform.end();
 // C
 ```
 
+### 缓冲（Buffering）
+
+`Writable` 和 `Readable` 流都将数据存储在内部缓冲区中。
+
+可能缓冲的数据量取决于传给流的构造函数的 `highWaterMark` `选项。对于普通流，highWaterMark` 选项指定 总字节数。对于在对象模式下操作的流，`highWaterMark` 指定对象的总数。
+
+当实现调用 `stream.push(chunk)` 时，数据缓存在 `Readable` 流中。如果流的消费者没有调用 `stream.read()`，则数据会一直驻留在内部队列中，直到被消费。
+
+一旦内部读取缓冲区的总大小达到 `highWaterMark` 指定的阈值，则流将暂时停止从底层资源读取数据，直到可以消费当前缓冲的数据（也就是，流将停止调用内部的用于填充读取缓冲区 `readable._read()` 方法）。
+
+当重复调用 `writable.write(chunk)` 方法时，数据会缓存在 `Writable` 流中。虽然内部的写入缓冲区的总大小低于 `highWaterMark` 设置的阈值，但对 `writable.write()` 的调用将返回 `true`。一旦内部缓冲区的大小达到或超过 `highWaterMark`，则将返回 `false`。
+
+stream API 的一个关键目标，尤其是 `stream.pipe()` 方法，是将数据缓冲限制在可接受的水平，以便不同速度的来源和目标不会压倒可用内存。
+
+`highWaterMark` 选项是一个阈值，而不是限制：它规定了流在停止请求更多数据之前缓冲的数据量。它通常不强制执行严格的内存限制。特定的流实现可能会选择实现更严格的限制，但这样做是可选的。
+
+因为 `Duplex` 和 `Transform` 流都是 `Readable` 和 `Writable`，所以每个都维护两个独立的内部缓冲区，用于读取和写入，允许每一方独立于另一方操作，同时保持适当和高效的数据流。
+
+内部缓冲的机制是内部的实现细节，可能随时更改。但是，对于某些高级实现，可以使用 `writable.writableBuffer` 或 `readable.readableBuffer` 检索内部的缓冲区。不鼓励使用这些未记录的属性。
+
 ### 管道（Pipeline）
 
 通过 `.pipe()` 方法将多个流链接起来，形成一个数据处理流水线，使得数据可以从一个流无缝流动到另一个流。
 
-## 流式处理与背压（back pressure）的工作原理
-
-## 流式程序应用
+## 编写流式程序
