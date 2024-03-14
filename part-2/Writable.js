@@ -24,7 +24,7 @@ writable._write = function (chunk, encoding, next) {
 };
 
 // 所有数据均已写入底层
-writable.on("finish", () => process.stdout.write("DONE"));
+writable.on("finish", () => process.stdout.write("数据写入完成"));
 
 // 将一个个数据写入流中
 writable.write("a" + "\n");

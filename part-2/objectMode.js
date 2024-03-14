@@ -15,7 +15,7 @@ transform._transform = function (chunk, encoding, next) {
 
 transform.on("data", (data) => {
   // 不再需要 .toString()
-  console.log(data.toString());
+  console.log(data);
 });
 
 transform.write("a");

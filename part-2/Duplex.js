@@ -1,6 +1,6 @@
 const { Duplex } = require("stream");
 
-const duplex = Duplex();
+const duplex = new Duplex();
 
 // 可读端底层逻辑
 duplex._read = function () {
@@ -14,12 +14,12 @@ duplex._read = function () {
 
 // 可写端底层逻辑
 duplex._write = function (chunk, encoding, next) {
-  console.log(chunk.toString());
+  console.log('write data: ' + chunk.toString());
   next();
 };
 
 // 0, 1
-duplex.on("data", (data) => console.log(`ondata: ${data}`));
+duplex.on("data", (data) => console.log(`read data: ${data}`));
 
 duplex.write('a');
 duplex.write('b');
