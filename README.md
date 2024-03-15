@@ -27,7 +27,7 @@
 
    - 多个流可以通过 `.pipe()` 方法串联起来形成一个管道，一个流的输出作为另一个流的输入，实现数据的连续处理。例如，先读取文件，接着压缩，然后加密，最后上传到远程服务器，整个过程可以构建一条高效的流处理链路。
 
-> [🔗 示例代码]()
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-1)
 
 ## 流的基本使用
 
@@ -194,7 +194,7 @@ writable.end();
 
 ### 双工流（Duplex Streams）
 
-双工流是同时可读和可写的流。它们既能读取数据，也能写入数据。例如，WebSocket 就是一种双工流。你可以通过创建自定义的双工流来实现特定的需求。
+双工流是同时可读和可写的流。它们既能读取数据，也能写入数据。例如，WebSocket 就是一种双工流。可以通过创建自定义的双工流来实现特定的需求。
 
 `Duplex` 实际上就是继承了 `Readable` 和 `Writable` 的一类流。 所以，一个 `Duplex` 对象既可当成可读流来使用（需要实现 `_read` 方法），也可当成可写流来使用（需要实现 `_write` 方法）。
 
@@ -215,15 +215,15 @@ duplex._read = function () {
 
 // 可写端底层逻辑
 duplex._write = function (chunk, encoding, next) {
-  console.log('write data: ' + chunk.toString());
+  console.log("write data: " + chunk.toString());
   next();
 };
 
 // 0, 1
 duplex.on("data", (data) => console.log(`read data: ${data}`));
 
-duplex.write('a');
-duplex.write('b');
+duplex.write("a");
+duplex.write("b");
 duplex.end();
 ```
 
@@ -305,23 +305,25 @@ transform.end();
 
 `Writable` 和 `Readable` 流都将数据存储在内部缓冲区中。
 
-缓冲区的数据量取决于传给流的构造函数的 `highWaterMark` 选项。对于普通流，`highWaterMark` 选项指定总字节数（默认为64字节）。对于在对象模式下操作的流，`highWaterMark` 指定对象的总数（默认为16个对象）。
+- 缓冲区的数据量取决于传给流的构造函数的 `highWaterMark` 选项。对于普通流，`highWaterMark` 选项指定总字节数（默认为 16384 个字节=16KB）。对于在对象模式下操作的流，`highWaterMark` 指定对象的总数（默认为 16 个对象）。
 
-当实现调用 `stream.push(chunk)` 时，数据缓存在 `Readable` 流中。如果流的消费者没有调用 `stream.read()`，则数据会一直驻留在内部队列中，直到被消费。
+- 当调用 `stream.push(chunk)` 时，数据缓存在 `Readable` 流中。如果流的消费者（例如通过监听 `'data'` 事件或者调用 `stream.read()` 方法）没有及时处理这些数据，则数据会一直驻留在内部队列中，直到被消费。
 
-一旦内部读取缓冲区的总大小达到 `highWaterMark` 指定的阈值，则流将暂时停止从底层资源读取数据，直到可以消费当前缓冲的数据（也就是，流将停止调用内部的用于填充读取缓冲区 `readable._read()` 方法）。
+- 一旦内部读取缓冲区的总大小达到 `highWaterMark` 指定的阈值，则流将暂时停止从底层资源读取数据，直到可以消费当前缓冲的数据（也就是，流将停止调用内部的用于填充读取缓冲区 `readable._read()` 方法）。
 
-当重复调用 `writable.write(chunk)` 方法时，数据会缓存在 `Writable` 流中。虽然内部的写入缓冲区的总大小低于 `highWaterMark` 设置的阈值，但对 `writable.write()` 的调用将返回 `true`。一旦内部缓冲区的大小达到或超过 `highWaterMark`，则将返回 `false`。
+- 当重复调用 `writable.write(chunk)` 方法时，数据会缓存在 `Writable` 流中。虽然内部的写入缓冲区的总大小低于 `highWaterMark` 设置的阈值，但对 `writable.write()` 的调用将返回 `true`。一旦内部缓冲区的大小达到或超过 `highWaterMark`，则将返回 `false`。
 
-stream API 的一个关键目标，尤其是 `stream.pipe()` 方法，是将数据缓冲限制在可接受的水平，以便不同速度的来源和目标不会压倒可用内存。
+- `highWaterMark` 选项是一个阈值，而不是限制：它规定了流在停止请求更多数据之前缓冲的数据量。它通常不强制执行严格的内存限制。特定的流实现可能会选择实现更严格的限制，但这样做是可选的。
 
-`highWaterMark` 选项是一个阈值，而不是限制：它规定了流在停止请求更多数据之前缓冲的数据量。它通常不强制执行严格的内存限制。特定的流实现可能会选择实现更严格的限制，但这样做是可选的。
-
-因为 `Duplex` 和 `Transform` 流都是 `Readable` 和 `Writable`，所以每个都维护两个独立的内部缓冲区，用于读取和写入，允许每一方独立于另一方操作，同时保持适当和高效的数据流。
-
-内部缓冲的机制是内部的实现细节，可能随时更改。但是，对于某些高级实现，可以使用 `writable.writableBuffer` 或 `readable.readableBuffer` 检索内部的缓冲区。不鼓励使用这些未记录的属性。
+- 因为 `Duplex` 和 `Transform` 流都是 `Readable` 和 `Writable`，所以每个都维护两个独立的内部缓冲区，用于读取和写入，允许每一方独立于另一方操作，同时保持适当和高效的数据流。
 
 ### 背压（Back Pressure）
+
+背压（Back Pressure）是指当数据的生产速率大于消费者（Consumer）的处理速率时，系统中出现的一种流量控制机制。通俗来讲，如果一个可读流（Readable Stream）产生的数据过快，而与其相连的可写流（Writable Stream）或其他数据消费者无法及时处理这些数据，就会发生背压现象。
+
+当背压发生时，如果没有适当的控制机制，可能会导致内存溢出，因为未处理的数据会积累在内存中。为了避免这种情况，Node.js 流提供了一种内在的背压管理机制，即当可写流的内部缓冲区满时，它会暂停可读流的读取操作，直到更多的缓冲空间可用时才会恢复读取。
+
+
 
 ### 管道（Pipeline）
 
