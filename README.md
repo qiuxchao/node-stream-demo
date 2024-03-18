@@ -108,6 +108,8 @@ readable.on("end", () => {
 });
 ```
 
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/Readable.js)
+
 #### 消费可读流
 
 有多种方式可以消费可读流：
@@ -142,6 +144,38 @@ const sourceStream = fs.createReadStream("input.txt");
 const destinationStream = fs.createWriteStream("output.txt");
 sourceStream.pipe(destinationStream);
 ```
+
+#### 两种读取模式
+
+可读流有两种主要的读取模式：流动模式（Flowing Mode）和暂停模式（Paused Mode）。
+
+1. 流动模式（Flowing Mode）： 在流动模式下，可读流会自动推送数据到应用。一旦可读流开始流动，它会持续地触发 `'data'` 事件，直到数据流结束，触发 'end' 事件。流动模式可以通过以下方式启动：
+
+    - 监听 `'data'` 事件。
+    - 调用 `resume()` 方法。
+    - 将可读流连接到可写流，使用 `pipe()` 方法。
+
+在流动模式下，Node.js 会自动管理背压，当可写流的内部缓冲区填满时，它会暂停可读流的读取操作。
+
+2. 暂停模式（Paused Mode）： 在暂停模式下，可读流不会自动推送数据，除非显式调用 `read()` 方法来读取数据。暂停模式可以通过以下方式启用：
+
+    - 调用 `pause()` 方法。
+    - 不监听 `'data'` 事件。
+
+在暂停模式下，需要手动处理背压，适时调用 `read()` 方法读取数据，并在适当的时候调用 `resume()` 方法恢复读取，或者在可写流准备好接收更多数据时（触发 `'drain'` 事件时）调用 `resume()` 方法。
+
+#### 三种状态
+
+可读流 "两种模式" 的概念是对其实现过程中发生的更复杂的内部状态管理的简化抽象。具体来说，在任何给定的时间点，每个可读流都处于三种可能的状态之一，`readable.readableFlowing` 属性反映了流当前的流动状态：
+
+- `null`（未知或未初始化）： 当 `readable.readableFlowing` 的值为 `null` 时，说明当前流的状态还没有初始化或处在不确定状态。在流实例刚创建后或重置状态下，`readableFlowing` 可能会是 `null`，随后通过调用相关方法改变流的行为后，该属性的值将变为 `true` 或 `false`。
+
+- `true`（流动模式）： 当 `readable.readableFlowing` 的值为 `true` 时，表明可读流处于流动模式（Flowing Mode）。在这种模式下，可读流会自动推送数据给消费者。当有数据可读时，流会触发 `'data'` 事件，当数据全部读取完毕时触发 `'end'` 事件。流动模式可以通过监听 `'data'` 事件、调用 `resume()` 方法或使用 `pipe()` 方法连接到可写流来启动。
+
+- `false`（暂停模式）： 当 `readable.readableFlowing` 的值为 `false` 时，表明可读流处于暂停模式（Paused Mode）。此时，流不会自动推送数据，需要通过调用 `read()` 方法手动读取数据。在暂停模式下，开发者需要手动管理数据读取的频率和节奏，以避免潜在的背压问题。
+
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/AsyncReadable.js)
+
 
 ### 可写流（Writable Streams）
 
@@ -190,7 +224,7 @@ writable.write("c" + "\n");
 writable.end();
 ```
 
-> 参考链接：<https://nodejs.cn/api/stream.html#%E5%8F%AF%E5%86%99%E6%B5%81>
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/Writable.js)
 
 ### 双工流（Duplex Streams）
 
@@ -231,6 +265,8 @@ duplex.end();
 
 因为它既可读又可写，所以称它有两端：可写端和可读端。 可写端的接口与 `Writable` 一致，作为下游来使用；可读端的接口与 `Readable` 一致，作为上游来使用。
 
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/Duplex.js)
+
 ### 转换流（Transform Streams）
 
 在上面的例子中，可读流中的数据（0, 1）与可写流中的数据（'a', 'b'）是隔离开的，但在 `Transform` 中可写端写入的数据经变换后会自动添加到可读端。 `Transform` 继承自 `Duplex`，并已经实现了 `_read` 和 `_write` 方法，同时要求用户实现一个 `_transform` 方法。
@@ -258,6 +294,8 @@ transform.end();
 // B
 // C
 ```
+
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/Transform.js)
 
 ### 对象模式（Object Mode）
 
@@ -301,17 +339,19 @@ transform.end();
 // C
 ```
 
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-2/objectMode.js)
+
 ### 缓冲（Buffering）
 
-`Writable` 和 `Readable` 流都将数据存储在内部缓冲区中。
+可读流和可写流都将数据存储在内部缓冲区中。
 
 - 缓冲区的数据量取决于传给流的构造函数的 `highWaterMark` 选项。对于普通流，`highWaterMark` 选项指定总字节数（默认为 16384 个字节=16KB）。对于在对象模式下操作的流，`highWaterMark` 指定对象的总数（默认为 16 个对象）。
 
-- 当调用 `stream.push(chunk)` 时，数据缓存在 `Readable` 流中。如果流的消费者（例如通过监听 `'data'` 事件或者调用 `stream.read()` 方法）没有及时处理这些数据，则数据会一直驻留在内部队列中，直到被消费。
+- 当调用 `stream.push(chunk)` 时，数据缓存在可读流中。如果流的消费者（例如通过监听 `'data'` 事件或者调用 `stream.read()` 方法）没有及时处理这些数据，则数据会一直驻留在缓存队列中，直到被消费。
 
 - 一旦内部读取缓冲区的总大小达到 `highWaterMark` 指定的阈值，则流将暂时停止从底层资源读取数据，直到可以消费当前缓冲的数据（也就是，流将停止调用内部的用于填充读取缓冲区 `readable._read()` 方法）。
 
-- 当重复调用 `writable.write(chunk)` 方法时，数据会缓存在 `Writable` 流中。虽然内部的写入缓冲区的总大小低于 `highWaterMark` 设置的阈值，但对 `writable.write()` 的调用将返回 `true`。一旦内部缓冲区的大小达到或超过 `highWaterMark`，则将返回 `false`。
+- 当重复调用 `writable.write(chunk)` 方法时，数据会缓存在可写流中。当内部的写入缓冲区的总大小低于 `highWaterMark` 设置的阈值时，但对 `writable.write()` 的调用将返回 `true`。一旦内部缓冲区的大小达到或超过 `highWaterMark`，则将返回 `false`。
 
 - `highWaterMark` 选项是一个阈值，而不是限制：它规定了流在停止请求更多数据之前缓冲的数据量。它通常不强制执行严格的内存限制。特定的流实现可能会选择实现更严格的限制，但这样做是可选的。
 

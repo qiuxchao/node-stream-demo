@@ -41,8 +41,11 @@ class MyReadable extends Readable {
 
 const max = 10;
 const myReadable = new MyReadable(max);
+console.log(myReadable.readableFlowing); // null
+myReadable.pause();
 console.log(myReadable.readableFlowing); // false
+myReadable.resume();
+console.log(myReadable.readableFlowing); // true
 myReadable.on("data", (data) => {
   console.log(data);
-  // console.log(myReadable.readableFlowing); // true
 });
