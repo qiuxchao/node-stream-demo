@@ -145,7 +145,7 @@ const destinationStream = fs.createWriteStream("output.txt");
 sourceStream.pipe(destinationStream);
 ```
 
-#### 两种读取模式
+#### 两种模式
 
 可读流有两种主要的读取模式：流动模式（Flowing Mode）和暂停模式（Paused Mode）。
 
@@ -162,7 +162,7 @@ sourceStream.pipe(destinationStream);
 
 #### 三种状态
 
-可读流 "两种读取模式" 的概念是对其实现过程中发生的更复杂的内部状态管理的简化抽象。具体来说，在任何给定的时间点，每个可读流都处于三种可能的状态之一，`readable.readableFlowing` 属性反映了流当前的流动状态，下面是三种状态的取值和含义：
+可读流 "两种模式" 的概念是对其实现过程中发生的更复杂的内部状态管理的简化抽象。具体来说，在任何给定的时间点，每个可读流都处于三种可能的状态之一，`readable.readableFlowing` 属性反映了流当前的流动状态，下面是三种状态的取值和含义：
 
 - `null`（未知或未初始化）： 当 `readable.readableFlowing` 的值为 `null` 时，说明当前流的状态还没有初始化或处在不确定状态。在流实例刚创建后或重置状态下，`readableFlowing` 可能会是 `null`，随后通过调用相关方法改变流的行为后，该属性的值将变为 `true` 或 `false`。
 
