@@ -498,12 +498,14 @@ readable.pipe(writable);
 
 ## 编写流式程序
 
-示例：CSS样式生成器。
+### 示例1：CSS样式生成器。
 
 ```ts
-const { Readable, Transform } = require("stream");
+import { Readable, Transform } from "stream";
 
 class Style extends Readable {
+  style: { [key: string]: any };
+
   constructor() {
     super({ objectMode: true });
     this.style = {};
@@ -515,8 +517,12 @@ class Style extends Readable {
   }
 }
 
+type ColorType = "red" | "green" | "blue" | (string & {});
+
 class Color extends Transform {
-  constructor(color: "red" | "green" | "blue" | (string & {})) {
+  color: ColorType;
+
+  constructor(color: ColorType) {
     super({ objectMode: true });
     this.color = color || "red";
   }
@@ -526,8 +532,12 @@ class Color extends Transform {
   }
 }
 
+type TextAlignType = "left" | "center" | "right";
+
 class TextAlign extends Transform {
-  constructor(textAlign: "left" | "center" | "right") {
+  textAlign: TextAlignType;
+
+  constructor(textAlign: TextAlignType) {
     super({ objectMode: true });
     this.textAlign = textAlign || "left";
   }
@@ -540,8 +550,12 @@ class TextAlign extends Transform {
   }
 }
 
+type BackgroundType = "blue" | "black" | "white" | (string & {});
+
 class Background extends Transform {
-  constructor(background: "blue" | "black" | "white" | (string & {})) {
+  background: BackgroundType;
+
+  constructor(background: BackgroundType) {
     super({ objectMode: true });
     this.background = background || "left";
   }
@@ -566,3 +580,107 @@ style
 ```
 
 > [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-3/cssStyle.js)
+
+### 示例2：断点续传
+
+服务端：
+
+```ts
+import { createServer } from "http";
+import { resolve } from "path";
+import { createWriteStream, statSync } from "fs";
+
+const savePath = resolve(__dirname, "output.txt");
+
+createServer((req, res) => {
+  console.log(req.url);
+
+  // 创建写入流，用于写入文件
+  const fileStream = createWriteStream(savePath, { flags: "a" });
+
+  // 获取已经接收到的文件大小
+  let len = statSync(savePath).size;
+
+  // 获取已上传的文件大小接口
+  if (req.url?.includes("getLen")) {
+    res.end(len.toString());
+    return;
+  }
+
+  req.pipe(fileStream).on("finish", () => {
+    res.end("ok");
+  });
+}).listen(6677);
+```
+
+客户端：
+
+```ts
+import { request } from "http";
+import { resolve } from "path";
+import { createReadStream } from "fs";
+
+const inputPath = resolve(__dirname, "input.txt");
+
+const options = {
+  hostname: "localhost",
+  port: 6677,
+};
+
+// 获取已上传的长度
+const getLen = (): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const req = request(
+      {
+        ...options,
+        path: "/getLen",
+      },
+      (res) => {
+        // 处理响应
+        let responseData = "";
+        res.on("data", (chunk) => {
+          responseData += chunk;
+        });
+        res.on("end", () => {
+          resolve(Number(responseData));
+        });
+      }
+    );
+    // 处理错误
+    req.on("error", reject);
+    // 发送请求
+    req.end();
+  });
+};
+
+// 上传没传过的部分
+const upload = (finishedLen: number) => {
+  const readableStream = createReadStream(inputPath, {
+    start: finishedLen,
+  });
+  return new Promise((resolve, reject) => {
+    // 创建请求 req 是一个可写流
+    const req = request({
+      ...options,
+      method: "POST",
+    });
+    // 处理错误
+    req.on("error", reject);
+    readableStream.pipe(req).on("finish", resolve);
+  });
+};
+
+(async () => {
+  const len = await getLen();
+  console.log("已上传：", len);
+  await upload(len);
+  console.log("上传完成");
+})();
+```
+
+> [🔗 示例代码](https://github.com/qiuxchao/node-stream-demo/tree/main/part-3/pointUpload)
+
+> 本文参考：<br/>
+> [流 - Node.js 中文文档](https://nodejs.cn/api/stream.html) <br/>
+> [流 - Node Guidebook](https://tsejx.github.io/node-guidebook/system/io/stream) <br/>
+> [Node.js Stream - 基础篇](https://tech.meituan.com/2016/07/08/stream-basics.html)

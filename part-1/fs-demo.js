@@ -2,10 +2,10 @@ const { createWriteStream, createReadStream, readFile } = require("fs");
 const {resolve} = require('path');
 
 // 使用 readFile 会将整个文件读取到内存中
-// readFile(resolve(__dirname, 'big.file'), (err, buffer) => {
-//   console.log((buffer.length / 1024 / 1024).toFixed(2) + ' MB'); // 450.13 MB
-//   // console.log(buffer.toString());
-// });
+readFile(resolve(__dirname, 'big.file'), (err, buffer) => {
+  console.log((buffer.length / 1024 / 1024).toFixed(2) + ' MB'); // 450.13 MB
+  // console.log(buffer.toString());
+});
 
 // 使用 createReadStream 会将文件以流的形式读取到内存中，每次读取一段数据
 // const readBigFileStream = createReadStream(resolve(__dirname, 'big.file'), {

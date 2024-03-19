@@ -1,6 +1,8 @@
-const { Readable, Transform } = require("stream");
+import { Readable, Transform } from "stream";
 
 class Style extends Readable {
+  style: { [key: string]: any };
+
   constructor() {
     super({ objectMode: true });
     this.style = {};
@@ -12,8 +14,12 @@ class Style extends Readable {
   }
 }
 
+type ColorType = "red" | "green" | "blue" | (string & {});
+
 class Color extends Transform {
-  constructor(color: "red" | "green" | "blue" | (string & {})) {
+  color: ColorType;
+
+  constructor(color: ColorType) {
     super({ objectMode: true });
     this.color = color || "red";
   }
@@ -23,8 +29,12 @@ class Color extends Transform {
   }
 }
 
+type TextAlignType = "left" | "center" | "right";
+
 class TextAlign extends Transform {
-  constructor(textAlign: "left" | "center" | "right") {
+  textAlign: TextAlignType;
+
+  constructor(textAlign: TextAlignType) {
     super({ objectMode: true });
     this.textAlign = textAlign || "left";
   }
@@ -37,8 +47,12 @@ class TextAlign extends Transform {
   }
 }
 
+type BackgroundType = "blue" | "black" | "white" | (string & {});
+
 class Background extends Transform {
-  constructor(background: "blue" | "black" | "white" | (string & {})) {
+  background: BackgroundType;
+
+  constructor(background: BackgroundType) {
     super({ objectMode: true });
     this.background = background || "left";
   }
