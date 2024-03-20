@@ -27,11 +27,11 @@ inputStream
   .on("finish", () => {
     console.log("加密完成");
     // 解密
-    fs.createReadStream(outputFilePath)
-      .pipe(decryptStream)
-      .pipe(gunzipStream)
-      .pipe(fs.createWriteStream("output-decrypt.txt"))
-      .on("finish", () => {
-        console.log("解密完成");
-      });
+    // fs.createReadStream(outputFilePath)
+    //   .pipe(decryptStream)
+    //   .pipe(gunzipStream)
+    //   .pipe(fs.createWriteStream("output-decrypt.txt"))
+    //   .on("finish", () => {
+    //     console.log("解密完成");
+    //   });
   });

@@ -10,7 +10,7 @@ readFile(resolve(__dirname, 'big.file'), (err, buffer) => {
 // 使用 createReadStream 会将文件以流的形式读取到内存中，每次读取一段数据
 // const readBigFileStream = createReadStream(resolve(__dirname, 'big.file'), {
 //   // 设置缓冲区大小 10MB
-//   highWaterMark: 1024 * 1024 * 10
+//   // highWaterMark: 1024 * 1024 * 10
 // });
 // readBigFileStream.on('data', (data) => {
 //   // 未设置缓冲区大小时，每次读取的大小为 0.06MB（64KB）；设置缓冲区大小后，每次读取的大小为 10MB

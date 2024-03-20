@@ -34,12 +34,7 @@
 Node.js 中的流可以分为四种类型：可读流（Readable）、可写流（Writable）、双工流（Duplex）和转换流（Transform）。每种类型都有其特定的用途和功能。
 
 ```js
-const Stream = require("stream");
-
-const Readable = Stream.Readable;
-const Writable = Stream.Writable;
-const Duplex = Stream.Duplex;
-const Transform = Stream.Transform;
+const { Readable, Writable, Duplex, Transform } = require("stream");
 ```
 
 ### 可读流（Readable Streams）
