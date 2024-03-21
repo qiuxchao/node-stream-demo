@@ -438,13 +438,13 @@ run();
 
 ### 管道（Pipeline）
 
-![pipe](./assets/pipe.png)
-
 `pipe()` 方法是可读流（Readable Stream）的一个实例方法，用于将可读流连接到可写流（Writable Stream）以实现数据的自动传输。通过 `pipe()` 方法将多个流链接起来，形成一个数据处理流水线，使得数据可以从一个流无缝流动到另一个流。
 
 ```js
 readableStream.pipe(writableStream, [options]);
 ```
+
+![pipe](./assets/pipe.png)
 
 使用 `pipe()` 方法时，它会自动处理数据传输，并处理背压（Backpressure）以确保数据流平衡。
 
